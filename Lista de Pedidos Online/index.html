@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista de Produtos</title>
+    <!-- Link para o arquivo CSS externo -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h2>Lista de Produtos</h2>
+<div class="add-section">
+    <input type="text" id="newSectionName" placeholder="Nome da Seção">
+    <button onclick="addSection()">Adicionar Seção</button>
+</div>
+<div id="sections"></div>
+<button onclick="generateReport()">Gerar Relatório</button>
+<button onclick="saveOnline()">Salvar Online</button>
+<input type="file" id="importFile" onchange="importHistory(event)">
+<div id="report"></div>
+
+<!-- Lista de salvamentos online -->
+<h2>Salvamentos Online</h2>
+<div class="saved-cards" id="savedCards"></div>
+
+<!-- Inclua os scripts do Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.17.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.17.2/firebase-database-compat.js"></script>
+
+<!-- Inclua o script do SortableJS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+
+<!-- Inclua o arquivo JavaScript externo -->
+<script src="script.js"></script>
+
+</body>
+</html>

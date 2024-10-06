@@ -1,0 +1,154 @@
+/* style.css */
+
+/* Seu CSS permanece o mesmo */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
+    color: #333;
+    margin: 0;
+    padding: 20px;
+}
+
+h2 {
+    color: #007f82;
+    padding-bottom: 10px;
+    display: inline-block;
+}
+
+ul {
+    list-style-type: none;
+    padding-left: 0;
+    min-height: 50px;
+    border: 2px dashed #007f82;
+    border-radius: 5px;
+    padding: 10px;
+}
+
+ul.placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #e0f7fa;
+}
+
+ul.placeholder::after {
+    content: "+";
+    font-size: 24px;
+    color: #007f82;
+}
+
+li {
+    background-color: #fff;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: grab;
+    transition: transform 0.2s ease, background-color 0.2s ease;
+    touch-action: pan-y;
+    user-select: none;
+}
+
+li:active {
+    cursor: grabbing;
+    transform: scale(1.05);
+    background-color: #e0f7fa;
+}
+
+li.riscado {
+    text-decoration: line-through;
+    color: gray;
+}
+
+button {
+    background-color: #007f82;
+    border: none;
+    color: white;
+    padding: 8px 16px;
+    text-align: center;
+    font-size: 14px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #005f5f;
+}
+
+input[type="text"], input[type="number"] {
+    padding: 5px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    margin-right: 10px;
+}
+
+input[type="number"] {
+    width: 70px;
+}
+
+.container {
+    display: flex;
+    align-items: center;
+}
+
+.button-group {
+    display: flex;
+    gap: 10px;
+}
+
+.add-section {
+    margin-top: 20px;
+}
+
+.discard-section-btn {
+    margin-left: 10px;
+    background-color: #ff5c5c;
+}
+
+.discard-section-btn:hover {
+    background-color: #e04a4a;
+}
+
+.section {
+    background-color: #e0f7fa;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 5px;
+}
+
+.saved-cards {
+    margin-top: 30px;
+}
+
+.saved-card {
+    background-color: #ffffff;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    border: 1px solid #007f82;
+}
+
+.saved-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+@media (max-width: 768px) {
+    li {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .button-group {
+        margin-top: 10px;
+    }
+
+    input[type="number"], input[type="text"] {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+}
