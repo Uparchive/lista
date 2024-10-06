@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lista de Produtos</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background-color: #f0f0f0;
+        color: #333;
+        margin: 0;
+        padding: 20px;
+    }
+
+    h2 {
+        color: #007f82;
+        padding-bottom: 10px;
+        display: inline-block;
+    }
+
+    ul {
+        list-style-type: none;
+        padding-left: 0;
+        min-height: 50px;
+        border: 2px dashed #007f82;
+        border-radius: 5px;
+        padding: 10px;
+    }
+
+    ul.placeholder {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #e0f7fa;
+    }
+
+    ul.placeholder::after {
+        content: "+";
+        font-size: 24px;
+        color: #007f82;
+    }
+
+    li {
+        background-color: #fff;
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 5px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: grab;
+        transition: transform 0.2s ease, background-color 0.2s ease;
+        touch-action: pan-y;
+        user-select: none;
+    }
+
+    li:active {
+        cursor: grabbing;
+        transform: scale(1.05);
+        background-color: #e0f7fa;
+    }
+
+    li.riscado {
+        text-decoration: line-through;
+        color: gray;
+    }
+
+    button {
+        background-color: #007f82;
+        border: none;
+        color: white;
+        padding: 8px 16px;
+        text-align: center;
+        font-size: 14px;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+
+    button:hover {
+        background-color: #005f5f;
+    }
+
+    input[type="text"], input[type="number"] {
+        padding: 5px;
+        border-radius: 5px;
+        border: 1px solid #ccc;
+        margin-right: 10px;
+    }
+
+    input[type="number"] {
+        width: 70px;
+    }
+
+    .container {
+        display: flex;
+        align-items: center;
+    }
+
+    .button-group {
+        display: flex;
+        gap: 10px;
+    }
+
+    .add-section {
+        margin-top: 20px;
+    }
+
+    .discard-section-btn {
+        margin-left: 10px;
+        background-color: #ff5c5c;
+    }
+
+    .discard-section-btn:hover {
+        background-color: #e04a4a;
+    }
+
+    .section {
+        background-color: #e0f7fa;
+        padding: 20px;
+        margin-bottom: 20px;
+        border-radius: 5px;
+    }
+
+    .saved-cards {
+        margin-top: 30px;
+    }
+
+    .card {
+        background-color: #ffffff;
+        padding: 15px;
+        margin-bottom: 10px;
+        border-radius: 5px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    @media (max-width: 768px) {
+        li {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .button-group {
+            margin-top: 10px;
+        }
+
+        input[type="number"], input[type="text"] {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+    }
+</style>
+</head>
+<body>
+
+<h2>Lista de Produtos</h2>
+<div class="add-section">
+    <input type="text" id="newSectionName" placeholder="Nome da Seção">
+    <button onclick="addSection()">Adicionar Seção</button>
+</div>
+<div id="sections"></div>
+<button onclick="generateReport()">Gerar Relatório</button>
+<button onclick="exportHistory()">Exportar Histórico</button>
+<button onclick="saveOnline()">Salvar Online</button>
+<input type="file" id="importFile" onchange="importHistory(event)">
+<div id="report"></div>
+<div class="saved-cards" id="savedCards"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+<script>
+    let purchasedItems = JSON.parse(localStorage.getItem('purchasedItems')) || [];
+    let sections = JSON.parse(localStorage.getItem('sections')) || [];
+    let savedStates = JSON.parse(localStorage.getItem('savedStates')) || [];
+
+    function saveState() {
+        localStorage.setItem('purchasedItems', JSON.stringify(purchasedItems));
+        localStorage.setItem('sections', JSON.stringify(sections));
+    }
+
+    function saveOnline() {
+        const date = new Date();
+        const formattedDate = `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+        const saveName = prompt("Nome para o salvamento:", `Salvamento em ${formattedDate}`);
+        if (saveName) {
+            const savedState = {
+                name: saveName,
+                date: formattedDate,
+                sections: sections,
+                purchasedItems: purchasedItems
+            };
+            savedStates.push(savedState);
+            localStorage.setItem('savedStates', JSON.stringify(savedStates));
+            addSavedCardToDOM(savedState);
+        }
+    }
+
+    function addSavedCardToDOM(savedState) {
+        const savedCardsContainer = document.getElementById('savedCards');
+        const cardDiv = document.createElement('div');
+        cardDiv.classList.add('card');
+        cardDiv.innerHTML = `
+            <div class="card-header">
+                <strong>${savedState.name}</strong>
+                <span>${savedState.date}</span>
+            </div>
+            <button onclick="loadSavedState('${savedState.name}')">Carregar</button>
+        `;
+        savedCardsContainer.appendChild(cardDiv);
+    }
+
+    function loadSavedState(name) {
+        const savedState = savedStates.find(state => state.name === name);
+        if (savedState) {
+            sections = savedState.sections;
+            purchasedItems = savedState.purchasedItems;
+            saveState();
+            location.reload();
+        }
+    }
+
+    function restoreSavedCards() {
+        savedStates.forEach(savedState => {
+            addSavedCardToDOM(savedState);
+        });
+    }
+
+    function toggleRiscado(event, uniqueId) {
+        const listItem = event.target.closest('li');
+        const markButton = listItem.querySelector('.mark-button');
+        const unmarkButton = listItem.querySelector('.unmark-button');
+
+        const section = sections.find(s => s.items.some(i => i.uniqueId === uniqueId));
+        const item = section.items.find(i => i.uniqueId === uniqueId);
+
+        if (listItem.classList.contains('riscado')) {
+            // Desmarcar item
+            item.purchased = 0;
+            purchasedItems = purchasedItems.filter(p => p.uniqueId !== uniqueId);
+        } else {
+            // Marcar item
+            const purchasedQuantity = parseInt(listItem.querySelector('.purchased-input').value);
+            if (!purchasedQuantity || purchasedQuantity <= 0) {
+                alert('Por favor, insira a quantidade comprada antes de marcar o item.');
+                return;
+            }
+            item.purchased = purchasedQuantity;
+            purchasedItems.push({ name: item.name, store: item.store, purchased: item.purchased, uniqueId: uniqueId });
+        }
+
+        // Atualiza a interface do usuário
+        listItem.classList.toggle('riscado');
+        markButton.style.display = listItem.classList.contains('riscado') ? 'none' : 'inline-block';
+        unmarkButton.style.display = listItem.classList.contains('riscado') ? 'inline-block' : 'none';
+
+        saveState();
+    }
+
+    function discardItem(event, sectionName, uniqueId) {
+        const section = sections.find(s => s.name === sectionName);
+        if (section) {
+            section.items = section.items.filter(item => item.uniqueId !== uniqueId);
+            purchasedItems = purchasedItems.filter(item => item.uniqueId !== uniqueId);
+            const listItem = event.target.closest('li');
+            listItem.remove();
+            saveState();
+        }
+    }
+
+    function discardSection(event, sectionName) {
+        sections = sections.filter(section => section.name !== sectionName);
+        purchasedItems = purchasedItems.filter(item => item.section !== sectionName);
+        const sectionDiv = event.target.closest('.section');
+        sectionDiv.remove();
+        saveState();
+    }
+
+    function editSectionName(event, oldName) {
+        const newName = prompt('Editar nome da seção:', oldName);
+        if (newName && newName.trim() !== '') {
+            const section = sections.find(s => s.name === oldName);
+            if (section) {
+                section.name = newName;
+
+                // Atualizar o DOM
+                const sectionDiv = event.target.closest('.section');
+                sectionDiv.querySelector('h2').textContent = newName;
+                const ulElement = sectionDiv.querySelector('ul');
+                ulElement.dataset.sectionName = newName;
+
+                saveState();
+            }
+        }
+    }
+
+    function restoreState() {
+        sections.forEach(section => {
+            addSectionToDOM(section.name, section.items);
+        });
+    }
+
+    function addSection() {
+        const sectionName = document.getElementById('newSectionName').value.trim();
+        if (sectionName) {
+            const newSection = { name: sectionName, items: [] };
+            sections.push(newSection);
+            addSectionToDOM(sectionName, []);
+            document.getElementById('newSectionName').value = '';
+            saveState();
+        } else {
+            alert('Por favor, insira um nome para a seção.');
+        }
+    }
+
+    function addSectionToDOM(name, items) {
+        const sectionsContainer = document.getElementById('sections');
+        const sectionDiv = document.createElement('div');
+        sectionDiv.classList.add('section');
+        sectionDiv.innerHTML = `<h2>${name}</h2>
+            <button class="discard-section-btn" onclick="discardSection(event, '${name}')">Descartar Seção</button>
+            <button class="edit-section-btn" onclick="editSectionName(event, '${name}')">Editar Seção</button>
+            <ul class="sortable" ondragover="event.preventDefault()"></ul>
+            <div class="add-item">
+                <input type="number" placeholder="Qtd Estoque" class="newItemStock">
+                <input type="text" placeholder="Nome do Produto" class="newItemName">
+                <input type="number" placeholder="Qtd Pedida" class="newItemRequested">
+                <input type="text" placeholder="Loja" class="newItemStore">
+                <button onclick="addItem(event, '${name}')">Adicionar Produto</button>
+            </div>`;
+        sectionsContainer.appendChild(sectionDiv);
+        const ulElement = sectionDiv.querySelector('ul');
+        ulElement.dataset.sectionName = name; // Adicionado
+        if (items.length === 0) {
+            ulElement.classList.add('placeholder');
+        }
+        items.forEach(item => {
+            addItemToDOM(ulElement, item, name);
+        });
+        initializeSortable(ulElement);
+    }
+
+    function addItem(event, sectionName) {
+        const sectionDiv = event.target.closest('.section');
+        const itemStockInput = sectionDiv.querySelector('.newItemStock');
+        const itemNameInput = sectionDiv.querySelector('.newItemName');
+        const itemRequestedInput = sectionDiv.querySelector('.newItemRequested');
+        const itemStoreInput = sectionDiv.querySelector('.newItemStore');
+        const itemStock = parseInt(itemStockInput.value) || 0;
+        const itemName = itemNameInput.value.trim();
+        const itemRequested = parseInt(itemRequestedInput.value) || 0;
+        const itemStore = itemStoreInput.value.trim();
+        const uniqueId = `${itemName}-${itemStore}-${Date.now()}`;
+
+        if (itemName && itemStore) {
+            const section = sections.find(s => s.name === sectionName);
+            const newItem = {
+                name: itemName,
+                stock: itemStock,
+                requested: itemRequested,
+                store: itemStore,
+                purchased: 0,
+                uniqueId: uniqueId
+            };
+            section.items.push(newItem);
+            const ulElement = sectionDiv.querySelector('ul');
+            ulElement.classList.remove('placeholder');
+            addItemToDOM(ulElement, newItem, sectionName);
+            itemStockInput.value = '';
+            itemNameInput.value = '';
+            itemRequestedInput.value = '';
+            itemStoreInput.value = '';
+            saveState();
+        } else {
+            alert('Por favor, insira um nome para o produto e uma loja.');
+        }
+    }
+
+    function addItemToDOM(ulElement, item, sectionName) {
+        const listItem = document.createElement('li');
+        listItem.classList.add('container');
+        listItem.setAttribute('draggable', true);
+        listItem.setAttribute('data-unique-id', item.uniqueId);
+        listItem.innerHTML = `(Estoque: ${item.stock}) ${item.name} (Pedida: ${item.requested}, Loja: ${item.store})
+            <div class="button-group">
+                <input type="number" min="0" placeholder="Qtd Comprada" value="${item.purchased}" class="purchased-input" onchange="updatePurchased(event, '${sectionName}', '${item.uniqueId}')">
+                <button class="mark-button" onclick="toggleRiscado(event, '${item.uniqueId}')">Marcar</button>
+                <button class="unmark-button" onclick="toggleRiscado(event, '${item.uniqueId}')" style="display: none;">Desmarcar</button>
+                <button onclick="discardItem(event, '${sectionName}', '${item.uniqueId}')">Descartar</button>
+            </div>`;
+        ulElement.appendChild(listItem);
+
+        // Se o item já estava riscado (purchased > 0), atualiza a interface
+        if (item.purchased > 0) {
+            listItem.classList.add('riscado');
+            const markButton = listItem.querySelector('.mark-button');
+            const unmarkButton = listItem.querySelector('.unmark-button');
+            markButton.style.display = 'none';
+            unmarkButton.style.display = 'inline-block';
+        }
+    }
+
+    function initializeSortable(ulElement) {
+        new Sortable(ulElement, {
+            group: {
+                name: 'shared',
+                pull: true,
+                put: true
+            },
+            animation: 150,
+            fallbackOnBody: true,
+            swapThreshold: 0.65,
+            scroll: true,
+            scrollSensitivity: 60,
+            scrollSpeed: 20,
+            emptyInsertThreshold: 10,
+            supportPointer: false,
+            onEnd: function (evt) {
+                const itemId = evt.item.getAttribute('data-unique-id');
+                const oldSectionName = evt.from.dataset.sectionName;
+                const newSectionName = evt.to.dataset.sectionName;
+
+                if (oldSectionName && newSectionName && oldSectionName !== newSectionName) {
+                    const oldSection = sections.find(section => section.name === oldSectionName);
+                    const newSection = sections.find(section => section.name === newSectionName);
+                    const movedItem = oldSection.items.find(item => item.uniqueId === itemId);
+
+                    // Remover o item da seção antiga e adicionar na nova
+                    oldSection.items = oldSection.items.filter(item => item.uniqueId !== itemId);
+                    newSection.items.push(movedItem);
+                    saveState();
+                }
+
+                // Atualizar o placeholder das seções
+                if (evt.from.children.length === 0) {
+                    evt.from.classList.add('placeholder');
+                }
+                if (evt.to.children.length > 0) {
+                    evt.to.classList.remove('placeholder');
+                }
+            }
+        });
+    }
+
+    function updatePurchased(event, sectionName, uniqueId) {
+        const section = sections.find(s => s.name === sectionName);
+        if (section) {
+            const item = section.items.find(i => i.uniqueId === uniqueId);
+            if (item) {
+                const newPurchased = parseInt(event.target.value) || 0;
+                item.purchased = newPurchased;
+
+                // Atualiza o estado de riscado se a quantidade comprada for maior que 0
+                const listItem = event.target.closest('li');
+                const markButton = listItem.querySelector('.mark-button');
+                const unmarkButton = listItem.querySelector('.unmark-button');
+                if (newPurchased > 0) {
+                    if (!listItem.classList.contains('riscado')) {
+                        listItem.classList.add('riscado');
+                        markButton.style.display = 'none';
+                        unmarkButton.style.display = 'inline-block';
+                    }
+                    // Atualiza purchasedItems
+                    const existingItem = purchasedItems.find(p => p.uniqueId === uniqueId);
+                    if (existingItem) {
+                        existingItem.purchased = newPurchased;
+                    } else {
+                        purchasedItems.push({ name: item.name, store: item.store, purchased: newPurchased, uniqueId: uniqueId });
+                    }
+                } else {
+                    if (listItem.classList.contains('riscado')) {
+                        listItem.classList.remove('riscado');
+                        markButton.style.display = 'inline-block';
+                        unmarkButton.style.display = 'none';
+                    }
+                    purchasedItems = purchasedItems.filter(p => p.uniqueId !== uniqueId);
+                }
+                saveState();
+            }
+        }
+    }
+
+    function generateReport() {
+        const reportContainer = document.getElementById('report');
+        reportContainer.innerHTML = '<h3>Relatório de Compras:</h3>';
+
+        const markedItems = sections.flatMap(section => section.items.filter(item => item.purchased > 0));
+        if (markedItems.length > 0) {
+            const ul = document.createElement('ul');
+            markedItems.forEach(item => {
+                const li = document.createElement('li');
+                li.textContent = `${item.purchased} - ${item.name} - ${item.store}`;
+                ul.appendChild(li);
+            });
+            reportContainer.appendChild(ul);
+        } else {
+            reportContainer.textContent = 'Nenhum item foi marcado como comprado.';
+        }
+    }
+
+    function exportHistory() {
+        const data = { sections, purchasedItems };
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data));
+        const downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href", dataStr);
+        downloadAnchorNode.setAttribute("download", "lista_produtos_historico.json");
+        document.body.appendChild(downloadAnchorNode);
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
+    }
+
+    function importHistory(event) {
+        const file = event.target.files[0];
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const data = JSON.parse(e.target.result);
+            sections = data.sections || [];
+            purchasedItems = data.purchasedItems || [];
+            saveState();
+            location.reload();
+        };
+        reader.readAsText(file);
+    }
+
+    window.onload = function() {
+        restoreState();
+        restoreSavedCards();
+    };
+</script>
+
+</body>
+</html>
