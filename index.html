@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Lista de Produtos</title>
 <style>
+    /* Seu CSS permanece o mesmo */
     body {
         font-family: Arial, sans-serif;
         background-color: #f0f0f0;
@@ -127,15 +128,15 @@
         margin-top: 30px;
     }
 
-    .card {
+    .saved-card {
         background-color: #ffffff;
         padding: 15px;
         margin-bottom: 10px;
         border-radius: 5px;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        border: 1px solid #007f82;
     }
 
-    .card-header {
+    .saved-card-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -167,71 +168,49 @@
 </div>
 <div id="sections"></div>
 <button onclick="generateReport()">Gerar Relatório</button>
-<button onclick="exportHistory()">Exportar Histórico</button>
 <button onclick="saveOnline()">Salvar Online</button>
 <input type="file" id="importFile" onchange="importHistory(event)">
 <div id="report"></div>
+
+<!-- Lista de salvamentos online -->
+<h2>Salvamentos Online</h2>
 <div class="saved-cards" id="savedCards"></div>
 
+<!-- Inclua os scripts do Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.17.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.17.2/firebase-database-compat.js"></script>
+
+<!-- Inclua o script do SortableJS -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+
+<!-- Seu script principal -->
 <script>
+    // Configuração do Firebase
+    var firebaseConfig = {
+        apiKey: "AIzaSyAbADgKRicHlfDWoaXmIfU0EjGbU6nFkPQ",
+        authDomain: "armazene-acd30.firebaseapp.com",
+        databaseURL: "https://armazene-acd30-default-rtdb.firebaseio.com",
+        projectId: "armazene-acd30",
+        storageBucket: "armazene-acd30.appspot.com",
+        messagingSenderId: "853849509051",
+        appId: "1:853849509051:web:6fa7e18d0af9b9375b2d9e",
+        measurementId: "G-PHWMDP8QE0"
+    };
+    // Inicializa o Firebase
+    firebase.initializeApp(firebaseConfig);
+    var database = firebase.database();
+
+    // Seu código permanece o mesmo a partir daqui
     let purchasedItems = JSON.parse(localStorage.getItem('purchasedItems')) || [];
     let sections = JSON.parse(localStorage.getItem('sections')) || [];
-    let savedStates = JSON.parse(localStorage.getItem('savedStates')) || [];
 
     function saveState() {
         localStorage.setItem('purchasedItems', JSON.stringify(purchasedItems));
         localStorage.setItem('sections', JSON.stringify(sections));
     }
 
-    function saveOnline() {
-        const date = new Date();
-        const formattedDate = `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
-        const saveName = prompt("Nome para o salvamento:", `Salvamento em ${formattedDate}`);
-        if (saveName) {
-            const savedState = {
-                name: saveName,
-                date: formattedDate,
-                sections: sections,
-                purchasedItems: purchasedItems
-            };
-            savedStates.push(savedState);
-            localStorage.setItem('savedStates', JSON.stringify(savedStates));
-            addSavedCardToDOM(savedState);
-        }
-    }
-
-    function addSavedCardToDOM(savedState) {
-        const savedCardsContainer = document.getElementById('savedCards');
-        const cardDiv = document.createElement('div');
-        cardDiv.classList.add('card');
-        cardDiv.innerHTML = `
-            <div class="card-header">
-                <strong>${savedState.name}</strong>
-                <span>${savedState.date}</span>
-            </div>
-            <button onclick="loadSavedState('${savedState.name}')">Carregar</button>
-        `;
-        savedCardsContainer.appendChild(cardDiv);
-    }
-
-    function loadSavedState(name) {
-        const savedState = savedStates.find(state => state.name === name);
-        if (savedState) {
-            sections = savedState.sections;
-            purchasedItems = savedState.purchasedItems;
-            saveState();
-            location.reload();
-        }
-    }
-
-    function restoreSavedCards() {
-        savedStates.forEach(savedState => {
-            addSavedCardToDOM(savedState);
-        });
-    }
-
     function toggleRiscado(event, uniqueId) {
+        // Sua função permanece a mesma
         const listItem = event.target.closest('li');
         const markButton = listItem.querySelector('.mark-button');
         const unmarkButton = listItem.querySelector('.unmark-button');
@@ -527,9 +506,79 @@
         reader.readAsText(file);
     }
 
+    // Função para salvar o estado atual online (Firebase)
+    function saveOnline() {
+        const data = { sections, purchasedItems, timestamp: Date.now() };
+        const newDataKey = database.ref().child('savedStates').push().key;
+        const updates = {};
+        updates['/savedStates/' + newDataKey] = data;
+        database.ref().update(updates).then(() => {
+            alert('Estado salvo online com sucesso!');
+            loadSavedStates(); // Atualiza a lista de salvamentos
+        }).catch(error => {
+            alert('Erro ao salvar online: ' + error.message);
+        });
+    }
+
+    // Função para carregar os estados salvos online
+    function loadSavedStates() {
+        database.ref('/savedStates/').once('value').then(function(snapshot) {
+            const savedStates = [];
+            snapshot.forEach(function(childSnapshot) {
+                const savedState = childSnapshot.val();
+                savedState.key = childSnapshot.key;
+                savedStates.push(savedState);
+            });
+
+            // Exibir os mais recentes no topo
+            savedStates.sort((a, b) => b.timestamp - a.timestamp);
+
+            const savedCardsContainer = document.getElementById('savedCards');
+            savedCardsContainer.innerHTML = '';
+            savedStates.forEach(savedState => {
+                addSavedCardToDOM(savedState);
+            });
+        });
+    }
+
+    // Função para adicionar um cartão de salvamento ao DOM
+    function addSavedCardToDOM(savedState) {
+        const savedCardsContainer = document.getElementById('savedCards');
+        const card = document.createElement('div');
+        card.classList.add('saved-card');
+        const date = new Date(savedState.timestamp);
+        card.innerHTML = `
+            <div class="saved-card-header">
+                <strong>Salvo em: ${date.toLocaleString()}</strong>
+                <div>
+                    <button onclick="restoreSavedState('${savedState.key}')">Restaurar</button>
+                    <button onclick="deleteSavedState('${savedState.key}')">Excluir</button>
+                </div>
+            </div>`;
+        savedCardsContainer.appendChild(card);
+    }
+
+    // Função para restaurar um estado salvo
+    function restoreSavedState(key) {
+        database.ref('/savedStates/' + key).once('value').then(function(snapshot) {
+            const data = snapshot.val();
+            sections = data.sections || [];
+            purchasedItems = data.purchasedItems || [];
+            saveState();
+            location.reload();
+        });
+    }
+
+    // Função para excluir um estado salvo
+    function deleteSavedState(key) {
+        database.ref('/savedStates/' + key).remove().then(() => {
+            loadSavedStates();
+        });
+    }
+
     window.onload = function() {
         restoreState();
-        restoreSavedCards();
+        loadSavedStates();
     };
 </script>
 
