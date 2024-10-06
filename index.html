@@ -200,7 +200,6 @@
     firebase.initializeApp(firebaseConfig);
     var database = firebase.database();
 
-    // Seu código permanece o mesmo a partir daqui
     let purchasedItems = JSON.parse(localStorage.getItem('purchasedItems')) || [];
     let sections = JSON.parse(localStorage.getItem('sections')) || [];
 
@@ -210,7 +209,6 @@
     }
 
     function toggleRiscado(event, uniqueId) {
-        // Sua função permanece a mesma
         const listItem = event.target.closest('li');
         const markButton = listItem.querySelector('.mark-button');
         const unmarkButton = listItem.querySelector('.unmark-button');
@@ -314,7 +312,7 @@
             </div>`;
         sectionsContainer.appendChild(sectionDiv);
         const ulElement = sectionDiv.querySelector('ul');
-        ulElement.dataset.sectionName = name; // Adicionado
+        ulElement.dataset.sectionName = name;
         if (items.length === 0) {
             ulElement.classList.add('placeholder');
         }
@@ -501,7 +499,9 @@
             sections = data.sections || [];
             purchasedItems = data.purchasedItems || [];
             saveState();
-            location.reload();
+            // Limpar o DOM e restaurar o estado
+            document.getElementById('sections').innerHTML = '';
+            restoreState();
         };
         reader.readAsText(file);
     }
@@ -522,6 +522,9 @@
 
     // Função para carregar os estados salvos online
     function loadSavedStates() {
+        const savedCardsContainer = document.getElementById('savedCards');
+        savedCardsContainer.innerHTML = '<p>Carregando salvamentos...</p>';
+
         database.ref('/savedStates/').once('value').then(function(snapshot) {
             const savedStates = [];
             snapshot.forEach(function(childSnapshot) {
@@ -533,11 +536,13 @@
             // Exibir os mais recentes no topo
             savedStates.sort((a, b) => b.timestamp - a.timestamp);
 
-            const savedCardsContainer = document.getElementById('savedCards');
             savedCardsContainer.innerHTML = '';
             savedStates.forEach(savedState => {
                 addSavedCardToDOM(savedState);
             });
+        }).catch(function(error) {
+            savedCardsContainer.innerHTML = '<p>Erro ao carregar salvamentos.</p>';
+            console.error('Erro ao carregar salvamentos:', error);
         });
     }
 
@@ -565,7 +570,14 @@
             sections = data.sections || [];
             purchasedItems = data.purchasedItems || [];
             saveState();
-            location.reload();
+            // Limpar o DOM e reconstruir
+            document.getElementById('sections').innerHTML = '';
+            restoreState();
+            // Limpar o relatório
+            document.getElementById('report').innerHTML = '';
+        }).catch(function(error) {
+            alert('Erro ao restaurar o salvamento: ' + error.message);
+            console.error('Erro ao restaurar o salvamento:', error);
         });
     }
 
@@ -573,6 +585,9 @@
     function deleteSavedState(key) {
         database.ref('/savedStates/' + key).remove().then(() => {
             loadSavedStates();
+        }).catch(function(error) {
+            alert('Erro ao excluir o salvamento: ' + error.message);
+            console.error('Erro ao excluir o salvamento:', error);
         });
     }
 
